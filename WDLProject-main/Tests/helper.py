@@ -14,12 +14,11 @@ import shutil
 import pathlib
 import argparse
 from statistics import mode
-sys.path.insert(0,"../..")
+sys.path.insert(0, os.path.abspath('../../'))
 
-from wdl_vector.bregman import barycenter
-from wdl_vector.WDL import WDL
-from wdl_vector.WDL import histRegression
-from wdl_vector.bregman import bregmanBary
+from wdl.bregman import barycenter
+from wdl.WDL import WDL
+from wdl.bregman import bregmanBary
 
 from sklearn.decomposition import PCA
 from sklearn.decomposition import NMF
@@ -41,6 +40,12 @@ tpath =  str(os.path.dirname(os.path.dirname(os.getcwd())))
 #All of this handles the possibility of working with other files, if you are just
 #working exclusively with SalinasA, just use 4. 
 #Data file names
+fname = 'SalinasA_correct.mat'
+matname = 'salinasA_corrected'
+gtfname = 'SalinasA_gt.mat'
+gtname = 'salinasA_gt' 
+costcsv = str(os.path.dirname(os.path.dirname(os.getcwd()))) + '/salinas_costs.csv'
+
 fnames = ['Cuprite.mat', 'Indian_pines_corrected.mat', 'Pavia.mat', 'PaviaU.mat',
                'SalinasA_correct.mat', 'Salinas.mat']
 
@@ -56,9 +61,6 @@ gtfilenames = ['SalinasA_gt.mat', 'SalinasA_gt.mat', 'SalinasA_gt.mat', 'Salinas
 gtnames = ['salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt',
            'salinasA_gt']
 
-#Cost name file references
-costnames_pt = ['Cuprite_costs.pt', 'Indian_costs.pt', 'pavia_costs.pt', 'paviaU_costs.pt', 
-             'salinas_cost.pt', 'Cuprite_costs.pt']
 
 #Cost reference csv files
 costnames_csv = [tpath + '/Cuprite_costs.csv', tpath + '/Indian_costs.pt', '/paviaU_costs.csv',
@@ -120,55 +122,22 @@ def positivefy(data, pad=0):
     return data + np.abs(min) + pad
 
 #Loads in data for use
-#Variables:
-#index: file index for where to get it
-#mode: way to load in: (data, quadrant, gt): data is actual data, quadrant is 
-#just a quarter, gt is ground truth
-def data_loader(index, mode='data'):
+#Variable:
+#mode='data' or 'gt', loads in those respective files
+#NOTE: REFACTORED
+def data_loader(mode='data'):
     if mode == 'data':
-        data = loadmat(fnames[index], matnames[index])
+        data = loadmat(fname, matname)
     elif mode == 'gt':
-        data = loadmat(gtfilenames[index], gtnames[index])
+        data = loadmat(gtfname, gtname)
     data = data.reshape(data.shape[0]*data.shape[1], -1)
 
+    if mode != 'gt':
+        data = np.delete(data, [0, 32, 94], axis=1)
     #There are a couple bands to remove for these files, obtained by crossreferencing
     #with which channels I could find band lengths for 
-    if index == 0 or index == 5 and mode != 'gt':
-        data = np.delete(data, [1, 33, 97, 161], axis=1)
-    if index == 4 and mode != 'gt':
-        data = np.delete(data, [0, 32, 94], axis=1)
+
     return positivefy(data) #Guarantees non-negativity, a couple channels didn't hold
-
-#When stuff is downloaded from the cluster, it is very compartmentalized, with NN
-#files split up across many directories. This merges them into one array. 
-#Variables:
-#dir_name: directory looking through (str), mode:NN-mode (str), in_here (bool)= 
-#reshapes to be right size if true, false otherwise.
-def merge_process(dir_name, mode, in_here=True):
-    k = np.array([[]])
-    for path in pathlib.Path(dir_name).iterdir():
-        try: 
-            path_temp = str(path)
-            temp = np.load(path_temp)
-            temp = temp[~np.all(temp == 0, axis=1)] #Removes all 0 rows
-            k = np.append(k, temp)
-        except: 
-            print(str(path))
-    if in_here == False:
-        return k
-    else:
-        k = np.reshape(k, (int(k.shape[0]/5), 5))
-        return k
-
-#Does merge_process through multiple main directories storing information, same
-#idea, but also save_name is file name.
-def merge_multiple(dir_list, mode, save_name):
-    k = merge_process(dir_list[0], mode)
-    for index, i in enumerate(dir_list, start=1):
-       temp = merge_process(i, mode, in_here=False)
-       k = np.hstack((k, temp))
-    k = np.reshape(k, (int(k.shape[0]/5), 5))
-    np.save(save_name, k)
 
 #This function is meant to conduct one general full experiment with outputs and everything
 #Variables: 
@@ -189,7 +158,8 @@ def merge_multiple(dir_list, mode, save_name):
 #training_data: If non_empty, means using the training data in the file name passed in
 
 #NOTE: mu=geometric regularizer, reg=entropic regularizer
-def wdl_instance(k=2, index=4, train_size=100, dir_name='testing', reg=0.05, mu=0.1,
+#NOTE: REFACTORED
+def wdl_instance(k=2, train_size=100, dir_name='testing', reg=0.05, mu=0.1,
                  max_iters=50, n_restarts=1, lr=0.01, maxsinkiters=50,
                  cost_power=1, mode='train_classes', n_clusters=2, label_hard=[],
                  training_data=''):
@@ -199,7 +169,7 @@ def wdl_instance(k=2, index=4, train_size=100, dir_name='testing', reg=0.05, mu=
     #Loads in training data, so if empty will generate random sample
     #If using fixed sample, will load that in, also will have to update where lst is loaded in from
     if training_data == '':
-        data = data_loader(index, 'data')
+        data = data_loader('data')
         (train_data, lst, train_classes) = sample(data, train_size, mode=mode, n_labels=n_clusters, label_hard=label_hard)
         #train_data is the data, lst is the indicies in the array where each element is (if reshaped to 1d), 
         #and train_classes are the classes used. 
@@ -214,7 +184,7 @@ def wdl_instance(k=2, index=4, train_size=100, dir_name='testing', reg=0.05, mu=
     if type(cost_power) == str:
         C = torch.load(cost_power)
     else: 
-        C = Cost(index, cost_power)
+        C = Cost(cost_power)
 
     #Creates output file with parameters here just for tracking purposes
     with open(dir_name + '/params.txt', 'w') as file:
@@ -230,7 +200,6 @@ def wdl_instance(k=2, index=4, train_size=100, dir_name='testing', reg=0.05, mu=
     #Does WDL 
     wdl = WDL(n_atoms=k, dir=dir_name)
     train_data = train_data.T
-    barySolver = barycenter(C=C, method="bregman", reg=reg, maxsinkiter=maxsinkiters)
     (weights, V_WDL) = WDL_do(dev, wdl, train_data, C, reg, mu, max_iters, lr, n_restarts)
     torch.save(V_WDL, dir_name + '/atoms.pt')
     torch.save(weights, dir_name + '/coeff.pt')
@@ -245,10 +214,11 @@ def wdl_instance(k=2, index=4, train_size=100, dir_name='testing', reg=0.05, mu=
 #Makes cost matrix given csv file of costs
 #Variables:
 #index: file index reference, cost_power: power in cost distance
-def Cost(index, cost_power):
+#NOTE: REFACTORED
+def Cost(cost_power):
     vec = np.array([])
     size = 0
-    with open(costnames_csv[index]) as csvfile:
+    with open(costcsv) as csvfile:
         csvreader = csv.reader(csvfile, delimiter=',')
         for row in csvreader:
             vec = np.append(vec, float(row[2]))
@@ -273,11 +243,12 @@ def Cost(index, cost_power):
 #gt_index: File index used to pull gt labels 
 #label_hard: If want to preset labels
 #Data generated through call of sample under train classes
-def sample(X, size, mode='fixed_sample', n_labels=0, gt_index=4, label_hard=[]):
+#NOTE: REFACTORED
+def sample(X, size, mode='train_classes', n_labels=0, label_hard=[]):
     classes = set()
     lst = set()
-    gt_vals = data_loader(gt_index, 'gt')
-    gt_data = loadmat(gtfilenames[gt_index], gtnames[gt_index]) 
+    gt_vals = data_loader('gt')
+    gt_data = loadmat(gtfname, gtname) 
     gt_data = gt_data.reshape(gt_data.shape[0]*gt_data.shape[1], -1)
 
     if mode == 'train_classes': #When want a certain number of training classes
@@ -299,7 +270,7 @@ def sample(X, size, mode='fixed_sample', n_labels=0, gt_index=4, label_hard=[]):
                 lst.add(val)
                 classes.add(gt_data[val][0])
         train_labels = sorted(list(classes))
-    elif mode == 'everything': #Takes the whole image
+    elif mode == 'everything': #Takes the whole image of labeled data
         lst = set()
         train_labels = set()
         for i in range(X.shape[0]):
@@ -369,15 +340,12 @@ def kneighbor_weights(W, neighbors, constraint):
     #None: None
     #tight: 1 if both are NN of each other, 0 otherwise
     #loose: 1 if at least one of them is NN, 0 otherwise
-    #approx: 0 if neither neighbors, 1/2 if one is, 1 if both are
     if constraint == 'none': 
         return A 
-    elif constraint == 'and': #tight
+    elif constraint == 'and': #exclusive/both/tight
         return np.multiply(A, A.T)
-    elif constraint == 'or': #loose
+    elif constraint == 'or': #either/or
         return np.ceil((A + A.T)/2)
-    elif constraint == 'approx':
-        return (A + A.T)/2
 
 #Given directory name used in samples (big_sample...), gets atoms, mu, reg vals
 #Variable:
@@ -392,8 +360,6 @@ def path_convert(path_temp):
     path_temp = path_temp[second:]
     path_temp = path_temp[path_temp.find('_reg=') + 1:]
     path_temp_reg = path_temp.replace('reg=', '')
-    if 'dup' in path_temp_reg: 
-        path_temp_reg = path_temp_reg.replace('dup', '')
     path_temp_reg = float(path_temp_reg)
     return (path_temp_k, path_temp_mu, path_temp_reg)
 
@@ -432,7 +398,7 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', gen_mode='HPC',
     
     #This remaps the GT, and makes a mask matrix. Mask is 1 if data is labeled, 
     #0 otherwise. 
-    gt_data = data_loader(4, 'gt')
+    gt_data = data_loader('gt')
     mask = np.zeros(83*86)
     for i in range(gt_data.shape[0]):
         gt_data[i] = remap.get(gt_data[i][0])
@@ -720,8 +686,6 @@ def control_loop():
                         mode = 'true_random', n_clusters=6, 
                         label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
                         weights_vis=False, training_data='common_data.pt')
-        clustering_loop(core_dir=name, NN_mode='loose', train_mode='global')
-        clustering_loop(core_dir=name, NN_mode='tight', train_mode='global')
 
 #So similar idea from control loop, but also sometimes we might want to run on
 #very specific parameters, so this does that. 
@@ -740,8 +704,6 @@ def control_loop_individual():
                     mode = 'train_classes', n_clusters=6, 
                     label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
                     weights_vis=False)
-    clustering_loop(core_dir=name, NN_mode='loose')
-    clustering_loop(core_dir=name, NN_mode='tight')
 
 #So this performs Spatial K-NN
 #Now this is near exclusively run inside clustering_loop() so some of these params

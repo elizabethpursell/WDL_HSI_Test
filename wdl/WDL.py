@@ -1,12 +1,12 @@
 import math
 import torch
-from wdl_vector.bregman import OT, barycenter
+from wdl.bregman import OT, barycenter
 from old.bregman import OT as legacyOT
 from old.bregman import barycenter as legacyBarycenter
 import numpy as np
 from kmeans.kmeans import wassersteinKMeansInit
 import warnings
-from wdl_vector.bcm import getBCMweights
+from wdl.bcm import getBCMweights
 from utilities.simpleDistributions import simplexSample
 from torch.utils.data import DataLoader, TensorDataset
 

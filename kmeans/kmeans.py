@@ -1,6 +1,6 @@
 import math
 
-from wdl_vector.bregman import OT, barycenter
+from wdl.bregman import OT, barycenter
 import torch
 import numpy as np
 from tqdm import tqdm
