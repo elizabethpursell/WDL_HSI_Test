@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "kmeans",
+			"path": "../../../WDLProject-vectorize/kmeans"
+		},
+		{
+			"name": "WDL_code",
+			"path": "../.."
+		}
+	],
+	"settings": {}
+}
