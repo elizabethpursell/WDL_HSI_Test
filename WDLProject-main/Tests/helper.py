@@ -31,12 +31,6 @@ from scipy.optimize import linear_sum_assignment
 #Indian Pines/Salinas/Cuprite data is from the AVIRIS sensor: 
 # https://purr.purdue.edu/publications/1947/1
 
-#If file used is Cuprite/Salinas, remove data from rows: 1, 33, 97, 161
-
-#General reference arrays that allow you to retrieve data files easily
-#Pulls out csv files, mat files, anything that's used across all files
-tpath =  str(os.path.dirname(os.path.dirname(os.getcwd())))
-
 #All of this handles the possibility of working with other files, if you are just
 #working exclusively with SalinasA, just use 4. 
 #Data file names
@@ -44,27 +38,6 @@ fname = 'SalinasA_correct.mat'
 matname = 'salinasA_corrected'
 gtfname = 'SalinasA_gt.mat'
 gtname = 'salinasA_gt' 
-costcsv = str(os.path.dirname(os.path.dirname(os.getcwd()))) + '/salinas_costs.csv'
-
-fnames = ['Cuprite.mat', 'Indian_pines_corrected.mat', 'Pavia.mat', 'PaviaU.mat',
-               'SalinasA_correct.mat', 'Salinas.mat']
-
-#Data file matlab file references
-matnames = ['X', 'indian_pines_corrected', 'pavia', 'paviaU', 'salinasA_corrected',
-            'salinas']
-
-#Gt file names Only worked with Salinas for this so am lazy
-gtfilenames = ['SalinasA_gt.mat', 'SalinasA_gt.mat', 'SalinasA_gt.mat', 'SalinasA_gt.mat', 'SalinasA_gt.mat',
-       'SalinasA_gt.mat']
-
-#GT mat matlab file reference
-gtnames = ['salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt', 'salinasA_gt',
-           'salinasA_gt']
-
-
-#Cost reference csv files
-costnames_csv = [tpath + '/Cuprite_costs.csv', tpath + '/Indian_costs.pt', '/paviaU_costs.csv',
-                 tpath + '/paviaU_costs.csv', tpath + '/salinas_costs.csv', tpath + '/Cuprite_costs.csv']
 
 #END OF REFERENCES
 
@@ -134,8 +107,6 @@ def data_loader(mode='data'):
 
     if mode != 'gt':
         data = np.delete(data, [0, 32, 94], axis=1)
-    #There are a couple bands to remove for these files, obtained by crossreferencing
-    #with which channels I could find band lengths for 
 
     return positivefy(data) #Guarantees non-negativity, a couple channels didn't hold
 
@@ -160,9 +131,8 @@ def data_loader(mode='data'):
 #NOTE: mu=geometric regularizer, reg=entropic regularizer
 #NOTE: REFACTORED
 def wdl_instance(k=2, train_size=100, dir_name='testing', reg=0.05, mu=0.1,
-                 max_iters=50, n_restarts=1, lr=0.01, maxsinkiters=50,
-                 cost_power=1, mode='train_classes', n_clusters=2, label_hard=[],
-                 training_data=''):
+                 max_iters=50, n_restarts=1, lr=0.01, cost_power=1, mode='train_classes', 
+                 n_clusters=2, label_hard=[], training_data=''):
     dev = torch.device('cpu') #if torch.cuda.is_available() else torch.device("cpu")
     storage(dir_name) #All results are saved to dir_name
 
@@ -218,7 +188,8 @@ def wdl_instance(k=2, train_size=100, dir_name='testing', reg=0.05, mu=0.1,
 def Cost(cost_power):
     vec = np.array([])
     size = 0
-    with open(costcsv) as csvfile:
+    file = str(os.path.dirname(os.path.dirname(os.getcwd()))) + '/salinas_costs.csv'
+    with open(file) as csvfile:
         csvreader = csv.reader(csvfile, delimiter=',')
         for row in csvreader:
             vec = np.append(vec, float(row[2]))
@@ -270,15 +241,6 @@ def sample(X, size, mode='train_classes', n_labels=0, label_hard=[]):
                 lst.add(val)
                 classes.add(gt_data[val][0])
         train_labels = sorted(list(classes))
-    elif mode == 'everything': #Takes the whole image of labeled data
-        lst = set()
-        train_labels = set()
-        for i in range(X.shape[0]):
-            k = gt_vals[i][0]
-            if k != 0:
-                lst.add(i)
-                train_labels.add(k)
-        train_labels = sorted(list(train_labels))
 
     if not type(lst) == list: 
         lst = list(lst)
@@ -361,6 +323,7 @@ def path_convert(path_temp):
     path_temp = path_temp[path_temp.find('_reg=') + 1:]
     path_temp_reg = path_temp.replace('reg=', '')
     path_temp_reg = float(path_temp_reg)
+    
     return (path_temp_k, path_temp_mu, path_temp_reg)
 
 
@@ -376,8 +339,8 @@ def path_convert(path_temp):
 #savename: string for what you want to save the resulting NN matrix as. 
 #train_mode: 'global'= using same data for everything, so loads that in. 
 #recon: Will get reconstructions of training data if true. 
-def clustering_loop(core_dir='big_sample_k=', NN_mode='or', gen_mode='HPC', 
-                    par_dir='', savename='', train_mode='global', recon=False):
+def clustering_loop(core_dir='big_sample_k=', NN_mode='or', par_dir='', 
+                    savename='', train_mode='global', recon=False):
     
     #Sets up the color map, use remap to reassign labels as matplotlib coloring
     #can be a little weird at times. 
@@ -388,13 +351,7 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', gen_mode='HPC',
 
     test_neighbors = [20, 25, 30, 35, 40, 45, 50] ##NN we use
 
-    #Sets up params matrix for saving results for analysis uses
-    #Now the 1500 is probably too high, but rather going through and calculating 
-    #before running, I just made the matrix too big and can remove the 0 rows later.
-    if gen_mode == 'HPC': 
-        params = np.zeros((5*len(test_neighbors), 5))
-    else: 
-        params = np.zeros((len(test_neighbors)*1500, 5))
+    params = np.zeros((len(test_neighbors)*1500, 5))
     
     #This remaps the GT, and makes a mask matrix. Mask is 1 if data is labeled, 
     #0 otherwise. 
@@ -406,10 +363,9 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', gen_mode='HPC',
             mask[i] = 1
     mask = np.reshape(mask, (83, 86))
 
-    #If we do reconstructions, we need the cost matrix, loading it in here, 
-    #even if we don't use it is just better than loading it in a hundred times.
+    #If we do reconstructions, we need the cost matrix, loading it in here
     if recon: 
-        C = Cost(4, 1)
+        C = Cost(1)
 
     #The main loop. Iterates through neighbors, then goes through each directory
     #All of this is embedded in try/except to check things work
@@ -522,33 +478,50 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', gen_mode='HPC',
                 plt.imshow(train_plot, cmap=cmap)
                 plt.tick_params(left = False, right = False, labelleft = False, 
                 labelbottom = False, bottom = False) 
-                # plt.title('Learned labels ' + 'atoms=' + str(temp_k) + ' mu=' + str(temp_mu) 
-                #             + ' reg=' + str(temp_reg) +  ' accuracy=' + str(round(acc, 2)))
-                # plt.savefig(path_temp + '/learned_loose_clean_Acc=' + str(round(acc, 2)) + '_NN=' + str(neighbors) + '.pdf'
-                #             , bbox_inches='tight')
-                # plt.clf()
+                plt.title('Learned labels ' + 'atoms=' + str(temp_k) + ' mu=' + str(temp_mu) 
+                            + ' reg=' + str(temp_reg) +  ' accuracy=' + str(round(acc, 2)))
+                plt.savefig(path_temp + '/learned_loose_clean_Acc=' + str(round(acc, 2)) + '_NN=' + str(neighbors) + '.pdf'
+                            , bbox_inches='tight')
+                plt.clf()
 
                 #Saves the parameters and accuracy 
                 params[c,:] = [temp_mu, temp_k, temp_reg, neighbors, acc]
                 c += 1
     #Removes all rows that are all zeros, and then saves the matrix.
     params = params[~np.all(params == 0, axis=1)] 
-    if gen_mode == 'HPC':
-        np.save(core_dir + '/nn_results_' + NN_mode, params)
-    else:
-        np.save(NN_mode + '_' + savename, params)
+    np.save(NN_mode.title() + '_' + savename, params)
 
-#Synthetic WDL experiments
-#reg: entropy, mu: geometry, save: don't worry about it
-def synthetic_experiments(reg=0.001, mu=0):
+
+#Buckets: support
+def uniform(buckets, a, b):
+    X = np.zeros(buckets)
+    for i in range(X.shape[0]):
+        if i <= a: 
+            X[i] = 1/(8*(b-a))
+        if i >= b:
+            X[i] = 1/(8*(b-a))
+        if i > a and i < b:
+            X[i] = 1/(b-a)
+    X /= np.sum(X)
+    return X
+
+def laplace(buckets, mu, b):
+    Y = np.arange(0, buckets, dtype='float64')
+    for i in range(Y.shape[0]):
+        k = -1*abs(Y[i] - mu)
+        Y[i] = math.exp(k/b)/(2*b)
+    Y /= np.sum(Y, axis=0)
+    return Y
+
+def synthetic_experiments(samp=51, reg=0.001, mu=0, lm=True):
     #Directory where want outputs
-    dir_name = 'synth_mu=0.001_50_reg=' + str(reg)
-    dir_check(dir_name)
+    dir_name = 'synth_test_entropy=' + str(reg)
     size = 200 #Number of buckets 
-    samp = 51 #Number of samples
 
     #Atom creation
     test = np.zeros((2, size))
+    # test[0,:] = uniform(200, 20, 80)
+    # test[1,:] = laplace(200, 140, 4)
     test[0,:] = ot.datasets.make_1D_gauss(size, m=50, s=5)
     test[1,:] = ot.datasets.make_1D_gauss(size, m=130, s=10)
 
@@ -578,10 +551,32 @@ def synthetic_experiments(reg=0.001, mu=0):
     test = test.T
     
     #Gets synthetic data
+    if lm: 
+        test_dup = np.copy(test)
+        test_dup = test_dup.T
+        synth_lm = np.zeros((samp, size))
     for i in range(0, samp):
-        #synth_data[i,:] = weights[i,0]*test[0,:] + weights[i,1]*test[1,:]
+        if lm:
+            synth_lm[i,:] = weights[i,0]*test_dup[0,:] + weights[i,1]*test_dup[1,:]
         res = bregmanBary(torch.tensor(test), torch.tensor(weights[i,:]).view(-1, 1), M, reg=reg, maxiter=1000).numpy()
         synth_data[i,:] = res.reshape(res.shape[0],)
+
+    if lm: #linear mixture visualization
+        plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
+        synth_lm = torch.tensor(synth_lm.T) #Plots synthetic data
+        plt.plot(synth_lm)
+        plt.ylim(-0.025, 0.14)
+        plt.savefig(dir_name + '/linear_mixture.pdf', bbox_inches='tight')
+        plt.close()
+
+    #Synthetic data visualization
+    plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
+    synth_data = torch.tensor(synth_data.T) #Plots synthetic data
+    plt.plot(synth_data)
+    plt.ylim(-0.025, 0.14)
+    plt.savefig(dir_name + '/synth_data.pdf', bbox_inches='tight')
+    plt.close()
+    np.save(dir_name + '/synth_data', synth_data)
 
     #PCA model
     train = pca_model.fit_transform(synth_data) #PCA
@@ -621,15 +616,6 @@ def synthetic_experiments(reg=0.001, mu=0):
     plt.ylim(-0.025, 0.1)
     plt.savefig(dir_name + '/NMF_reconstruction.pdf', bbox_inches='tight')
     plt.close()
-
-    #Synthetic data visualization
-    plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
-    synth_data = torch.tensor(synth_data.T) #Plots synthetic data
-    plt.plot(synth_data)
-    plt.ylim(-0.025, 0.1)
-    plt.savefig(dir_name + '/synth_data.pdf', bbox_inches='tight')
-    plt.close()
-    np.save(dir_name + '/synth_data', synth_data)
 
     #Runs WDL on the data, as it's small, you can set n_restarts/max_iters pretty high
     #and it should run reasonably fast.
@@ -686,24 +672,6 @@ def control_loop():
                         mode = 'true_random', n_clusters=6, 
                         label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
                         weights_vis=False, training_data='common_data.pt')
-
-#So similar idea from control loop, but also sometimes we might want to run on
-#very specific parameters, so this does that. 
-def control_loop_individual(): 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--n_atoms", type=int)
-    parser.add_argument("--geom", type=float)
-    parser.add_argument('--reg', type=float)
-    args = parser.parse_args()
-    k = args.n_atoms
-    mu = args.geom
-    reg = args.reg
-    name = 'big_sample_k=' + str(k) + '_mu=' + str(mu) + '_reg=' + str(reg)
-    wdl_instance(k=k, train_size=1002, dir_name=name, reg=reg, mu=mu,
-                    max_iters=150, n_restarts=2, cost_power=1, 
-                    mode = 'train_classes', n_clusters=6, 
-                    label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
-                    weights_vis=False)
 
 #So this performs Spatial K-NN
 #Now this is near exclusively run inside clustering_loop() so some of these params
@@ -765,7 +733,7 @@ def euc_dist(X, Y, norm):
 def get_pca_nmf(data):
     #All number of atoms/components used 
     for k in [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36]:
-        dir_name = 'finish_pca_nmf/components=' + str(k)
+        dir_name = 'PCA_NMF_comparisons/components=' + str(k)
         pca = PCA(n_components=k)
         nmf = NMF(n_components=k, max_iter=1000)
 
@@ -780,7 +748,6 @@ def get_pca_nmf(data):
         plt.plot(eigen.T)
         plt.savefig(dir_name + '/PCA_eigenvectors.pdf', bbox_inches='tight')
         plt.clf()
-
         plt.plot(inv.T)
         plt.savefig(dir_name + '/PCA_reconstructions.pdf', bbox_inches='tight')
         plt.clf()
@@ -788,7 +755,6 @@ def get_pca_nmf(data):
         plt.plot(H.T)
         plt.savefig(dir_name + '/NMF_components.pdf', bbox_inches='tight')
         plt.clf()
-
         plt.plot(X.T)
         plt.savefig(dir_name + '/NMF_reconstructions.pdf', bbox_inches='tight')
         plt.clf()
@@ -801,4 +767,4 @@ if __name__ == "__main__":
     dev = torch.device('cpu')
     np.set_printoptions(suppress=True)
 
-    wdl_instance()
+    synthetic_experiments()
