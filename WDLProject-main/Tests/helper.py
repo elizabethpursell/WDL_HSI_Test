@@ -515,7 +515,7 @@ def laplace(buckets, mu, b):
 
 def synthetic_experiments(samp=51, reg=0.001, mu=0, lm=True):
     #Directory where want outputs
-    dir_name = 'synth_test_entropy=' + str(reg)
+    dir_name = 'synth_test_rho=0.1_entropy=' + str(reg)
     size = 200 #Number of buckets 
 
     #Atom creation
@@ -565,15 +565,15 @@ def synthetic_experiments(samp=51, reg=0.001, mu=0, lm=True):
         plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
         synth_lm = torch.tensor(synth_lm.T) #Plots synthetic data
         plt.plot(synth_lm)
-        plt.ylim(-0.025, 0.14)
+        plt.ylim(-0.025, 0.1)
         plt.savefig(dir_name + '/linear_mixture.pdf', bbox_inches='tight')
         plt.close()
 
     #Synthetic data visualization
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
-    synth_data = torch.tensor(synth_data.T) #Plots synthetic data
-    plt.plot(synth_data)
-    plt.ylim(-0.025, 0.14)
+    #synth_data = torch.tensor(synth_data.T) #Plots synthetic data
+    plt.plot(synth_data.T)
+    plt.ylim(-0.025, 0.1)
     plt.savefig(dir_name + '/synth_data.pdf', bbox_inches='tight')
     plt.close()
     np.save(dir_name + '/synth_data', synth_data)
@@ -620,8 +620,9 @@ def synthetic_experiments(samp=51, reg=0.001, mu=0, lm=True):
     #Runs WDL on the data, as it's small, you can set n_restarts/max_iters pretty high
     #and it should run reasonably fast.
     wdl = WDL(n_atoms=2, dir=dir_name)
+    synth_data = synth_data.T
     barySolver = barycenter(C=M_old, method="bregman", reg=reg, maxiter=1000)
-    (weights, V_WDL) = WDL_do(dev, wdl, synth_data, M_old, reg, mu, n_restarts=20, max_iters=350)
+    (weights, V_WDL) = WDL_do(dev, wdl, synth_data, M_old, reg, mu, n_restarts=5, max_iters=2500)
     np.save(dir_name + '/atoms', V_WDL)
     np.save(dir_name + '/weights', weights)
 
@@ -759,6 +760,10 @@ def get_pca_nmf(data):
         plt.savefig(dir_name + '/NMF_reconstructions.pdf', bbox_inches='tight')
         plt.clf()
 
+def plot_training():
+    X = torch.load('common_data.pt')
+    plt.plot(X.T)
+    plt.savefig('salinasA_common_data.pdf')
 
 #Main function I put all code here
 if __name__ == "__main__":
@@ -766,5 +771,5 @@ if __name__ == "__main__":
     torch.set_default_dtype(torch.float64) 
     dev = torch.device('cpu')
     np.set_printoptions(suppress=True)
-
-    synthetic_experiments()
+    
+    synthetic_experiments(mu=0.1, lm=False)
