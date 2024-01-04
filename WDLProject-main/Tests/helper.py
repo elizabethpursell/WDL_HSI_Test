@@ -673,7 +673,8 @@ def control_loop():
                         mode = 'true_random', n_clusters=6, 
                         label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
                         weights_vis=False, training_data='common_data.pt')
-
+        clustering_loop(core_dir=name, NN_mode='loose', train_mode='global')
+        clustering_loop(core_dir=name, NN_mode='tight', train_mode='global')
 #So this performs Spatial K-NN
 #Now this is near exclusively run inside clustering_loop() so some of these params
 #might just be 0/not used.
@@ -733,6 +734,7 @@ def euc_dist(X, Y, norm):
 #data is the data used
 def get_pca_nmf(data):
     #All number of atoms/components used 
+    data = torch.load('common_data.pt')
     for k in [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36]:
         dir_name = 'PCA_NMF_comparisons/components=' + str(k)
         pca = PCA(n_components=k)
@@ -765,6 +767,43 @@ def plot_training():
     plt.plot(X.T)
     plt.savefig('salinasA_common_data.pdf')
 
+def gt_spatial_nn():
+    cmap = cm.get_cmap('viridis', 7)
+    new_cmap = mcolors.ListedColormap(cmap.colors)
+    new_cmap.colors[0] = (1, 1, 1, 1)
+    remap = {0: 0, 1: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6}
+
+    #This remaps the GT, and makes a mask matrix. Mask is 1 if data is labeled, 
+    #0 otherwise. 
+    gt_data = data_loader('gt')
+    mask = np.zeros(83*86)
+    for i in range(gt_data.shape[0]):
+        gt_data[i] = remap.get(gt_data[i][0])
+        if gt_data[i] != 0:
+            mask[i] = 1
+    mask = np.reshape(mask, (83, 86))
+    gt_data = np.reshape(gt_data, (83, 86))
+    spatial_NN(gt_data, 10, new_cmap, '', 0, 0, 0, 0, mask)
+
+#So similar idea from control loop, but also sometimes we might want to run on
+#very specific parameters, so this does that. 
+def control_loop_individual(): 
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_atoms", type=int)
+    parser.add_argument("--geom", type=float)
+    parser.add_argument('--reg', type=float)
+    args = parser.parse_args()
+    k = args.n_atoms
+    mu = args.geom
+    reg = args.reg
+    name = 'big_sample_k=' + str(k) + '_mu=' + str(mu) + '_reg=' + str(reg)
+    wdl_instance(k=k, train_size=1002, dir_name=name, reg=reg, mu=mu,
+                    max_iters=400, n_restarts=2, cost_power=1, 
+                    mode = 'train_classes', n_clusters=6, 
+                    label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
+                    weights_vis=False)
+    clustering_loop(core_dir=name, NN_mode='loose')
+
 #Main function I put all code here
 if __name__ == "__main__":
     print('Imports complete') #Just some default stuff, change dev if using gpus
@@ -772,4 +811,4 @@ if __name__ == "__main__":
     dev = torch.device('cpu')
     np.set_printoptions(suppress=True)
     
-    synthetic_experiments(mu=0.1, lm=False)
+    control_loop_individual()
