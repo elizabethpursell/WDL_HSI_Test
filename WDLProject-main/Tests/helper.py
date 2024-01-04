@@ -12,6 +12,7 @@ import sys
 import csv
 import shutil
 import pathlib
+import time
 import argparse
 from statistics import mode
 sys.path.insert(0, os.path.abspath('../../'))
@@ -797,12 +798,14 @@ def control_loop_individual():
     mu = args.geom
     reg = args.reg
     name = 'big_sample_k=' + str(k) + '_mu=' + str(mu) + '_reg=' + str(reg)
+    start = time.time()
     wdl_instance(k=k, train_size=1002, dir_name=name, reg=reg, mu=mu,
                     max_iters=400, n_restarts=2, cost_power=1, 
                     mode = 'train_classes', n_clusters=6, 
-                    label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
-                    weights_vis=False)
+                    label_hard=[1, 10, 11, 12, 13, 14])
     clustering_loop(core_dir=name, NN_mode='loose')
+    finish = time.time()
+    print('TOTAL RUN TIME: ', finish - start)
 
 #Main function I put all code here
 if __name__ == "__main__":
