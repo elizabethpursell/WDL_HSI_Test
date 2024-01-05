@@ -1,6 +1,6 @@
 # WDL HSI
 
-# All code specifically for the WDL algorithm is attributed to here: 
+All code specifically for the WDL algorithm is attributed to here: 
 https://github.com/MarshMue/GeoWDL-TAG-ML-ICML-2023
 
 Salinas A image is from here: 
