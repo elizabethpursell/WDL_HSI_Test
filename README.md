@@ -3,11 +3,10 @@
 All code specifically for the WDL algorithm is attributed to here: 
 https://github.com/MarshMue/GeoWDL-TAG-ML-ICML-2023
 
-Salinas A image is from here: 
-https://www.ehu.eus/ccwintco/index.php/Hyperspectral_Remote_Sensing_Scenes
-
 Information on the Salinas A sensor used for constructing the cost matrix is here:
 https://purr.purdue.edu/publications/1947/1
+
+Code here is associated with papers on WDL for hyperspectral image unmixing and clustering.
 
 Installation: 
 Recommend a Conda environment. Scripts to run experiments on Salinas A were run
