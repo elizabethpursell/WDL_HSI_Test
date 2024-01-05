@@ -66,3 +66,6 @@ Parameter invariant figures:
 GT and training data images
 
 The kmeans, old, utilities, and wdl folders are related to wdl. 
+
+
+If you have any questions about the code. email me, Scott Fullenbaum, at sfulle03@tufts.edu
