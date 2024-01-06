@@ -12,7 +12,6 @@ import sys
 import csv
 import shutil
 import pathlib
-import time
 import argparse
 from statistics import mode
 sys.path.insert(0, os.path.abspath('../../'))
@@ -489,18 +488,26 @@ def laplace(buckets, mu, b):
 #Synthetic experiments
 #reg= entropic regularizer, mu=geometric regularizer, lm=want linear mixture
 #To switch to other experiments
-def synthetic_experiments(reg=0.001, mu=0, lm=True):
+def synthetic_experiments(reg=0.001, mu=0, lm=True, dir_name='test', mode='gauss'):
+    torch.set_default_dtype(torch.float64) 
+    dev = torch.device('cpu')
     #Directory where want outputs
-    dir_name = 'synth_test_rho=0.1_entropy=' + str(reg)
-
+    #dir_name = 'synth_test_rho=0.1_entropy=' + str(reg)
+    dir_check(dir_name)
     size = 200 #Number of buckets 
-    samp = 51 #Sample size
+    if mode == 'gauss': 
+        samp = 51 #Sample size
+    else:
+        samp = 21
+
     #Atom creation
     test = np.zeros((2, size))
-    # test[0,:] = uniform(200, 20, 80)
-    # test[1,:] = laplace(200, 140, 4)
-    test[0,:] = ot.datasets.make_1D_gauss(size, m=50, s=5)
-    test[1,:] = ot.datasets.make_1D_gauss(size, m=130, s=10)
+    if mode == 'gauss':
+        test[0,:] = ot.datasets.make_1D_gauss(size, m=50, s=5)
+        test[1,:] = ot.datasets.make_1D_gauss(size, m=130, s=10)
+    else: 
+        test[0,:] = uniform(200, 20, 80)
+        test[1,:] = laplace(200, 140, 4)
 
     pca_model = PCA(n_components=2)
     nmf_model = NMF(n_components=2)
@@ -508,14 +515,18 @@ def synthetic_experiments(reg=0.001, mu=0, lm=True):
     #Visualizes synthetic atoms
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(1, 0, 2))))
     plt.plot(test.T)
-    plt.ylim(-0.025, 0.1)
+    if mode == 'gauss':
+        plt.ylim(-0.025, 0.1)
+    else:
+        plt.ylim(-0.025, 0.14)
     plt.savefig(dir_name + '/synth_atoms.pdf', bbox_inches='tight')
     plt.close()
 
     #Creates the weights for generating the barycenters
     weights = np.zeros((samp, 2))
     for i in range(0, samp):
-        weights[i,:] = np.array([0.02*i, 1 - 0.02*i])
+        k = float(1/(samp - 1))
+        weights[i,:] = np.array([k*i, 1 - k*i])
 
     #Cost matrix for barycenters
     M = ot.utils.dist0(size)
@@ -542,17 +553,26 @@ def synthetic_experiments(reg=0.001, mu=0, lm=True):
         plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
         synth_lm = torch.tensor(synth_lm.T) #Plots synthetic data
         plt.plot(synth_lm)
-        plt.ylim(-0.025, 0.1)
+        if mode == 'gauss':
+            plt.ylim(-0.025, 0.1)
+        else:
+            plt.ylim(-0.025, 0.14)
         plt.savefig(dir_name + '/linear_mixture.pdf', bbox_inches='tight')
         plt.close()
 
     #Synthetic data visualization
     plt.gca().set_prop_cycle(plt.cycler('color', plt.cm.viridis(np.linspace(0, 1, samp))))
     plt.plot(synth_data.T)
-    plt.ylim(-0.025, 0.1)
+    if mode == 'gauss':
+        plt.ylim(-0.025, 0.1)
+    else:
+        plt.ylim(-0.025, 0.14)
     plt.savefig(dir_name + '/synth_data.pdf', bbox_inches='tight')
     plt.close()
     np.save(dir_name + '/synth_data', synth_data)
+
+    if mode != 'gauss':
+        exit()
 
     #PCA model
     train = pca_model.fit_transform(synth_data) #PCA
