@@ -9,8 +9,11 @@ https://purr.purdue.edu/publications/1947/1
 Code here is associated with papers on WDL for hyperspectral image unmixing and clustering.
 
 Installation: 
-Recommend a Conda environment. Scripts to run experiments on Salinas A were run
-on the Tufts HPC Cluster. 
+Recommend a Conda environment to maintain. Scripts to run experiments on Salinas A were run on the Tufts HPC Cluster. For specific packages, this isn't an exhaustive list, but here are versions used for the main ones:
+1. ```numpy 1.23.5```
+2. ```pytorch 1.13.1```
+3. ```POT 0.8.2 ```
+4. ```scikit-learn 1.2.1```
 
 # Replication of paper images and results: 
 All figures are generated with code written in helper.py
