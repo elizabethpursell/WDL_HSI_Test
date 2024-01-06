@@ -1,6 +1,5 @@
 import helper 
 import argparse
-import torch
 
 def str2bool(val):
     if val in ('t', 'true', '1'):

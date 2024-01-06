@@ -12,8 +12,8 @@
 #SBATCH --mail-user=*
 
 
-module load anaconda/2021.05
+module load anaconda/*
 source activate /* #Path to conda environment goes here
-python3 helper.py "--n_atoms=$1" "--geom=$2" "--recip=$3"
+python3 salinas_run.py "--n_atoms=$1" "--geom=$2" "--recip=$3"
 
 

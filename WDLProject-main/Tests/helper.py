@@ -79,7 +79,7 @@ def positivefy(data, pad=0):
 #Loads in data for use
 #Variable:
 #mode='data' or 'gt', loads in those respective files
-def data_loader(mode='data'):
+def data_loader(mode='data', fname='SalinasA_correct.mat', matname='salinasA_corrected'):
     if mode == 'data':
         data = loadmat(fname, matname)
     elif mode == 'gt':
@@ -646,12 +646,15 @@ def synthetic_experiments(reg=0.001, mu=0, lm=True, dir_name='test', mode='gauss
 #one experiment, I set the values of mu/num atoms, then go through values of 
 #reg. 
 def control_loop():
+    torch.set_default_dtype(torch.float64) 
+    dev = torch.device('cpu')
     parser = argparse.ArgumentParser() #Reads in command line arguments
     parser.add_argument("--n_atoms", type=int)
     parser.add_argument("--geom", type=float)
     parser.add_argument("--recip", type=str)
     regs = [0.02, 0.05, 0.08, 0.1]
     args = parser.parse_args()
+    print(args)
     k = args.n_atoms
     mu = args.geom
     recip = args.recip
@@ -664,11 +667,11 @@ def control_loop():
     #In addition to doing WDL, this will also run the clustering loop on the results.
     for reg in regs: 
         name = 'big_fixed_sample_k=' + str(k) + '_mu=' + str(mu) + '_reg=' + str(reg)
+        name='testing'
         wdl_instance(k=k, train_size=1002, dir_name=name, reg=reg, mu=mu,
                         max_iters=250, n_restarts=1, cost_power=1, 
-                        mode = 'true_random', n_clusters=6, 
-                        label_hard=[1, 10, 11, 12, 13, 14], rec_training=False,
-                        weights_vis=False, training_data='common_data.pt')
+                        mode = 'train_classes', n_clusters=6, 
+                        label_hard=[1, 10, 11, 12, 13, 14], training_data='common_data.pt')
         clustering_loop(core_dir=name, NN_mode='loose', train_mode='global')
         clustering_loop(core_dir=name, NN_mode='tight', train_mode='global')
 
@@ -958,4 +961,3 @@ if __name__ == "__main__":
     dev = torch.device('cpu')
     np.set_printoptions(suppress=True)
 
-    control_loop()
