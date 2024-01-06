@@ -1,6 +1,6 @@
 # WDL HSI
 
-All code specifically for the WDL algorithm is attributed to here: 
+All code specifically for the WDL algorithm and any code in the folders titled wdl, kmeans, old, and utilities are attributed to here: 
 https://github.com/MarshMue/GeoWDL-TAG-ML-ICML-2023
 
 Information on the Salinas A sensor used for constructing the cost matrix is here:
@@ -41,9 +41,6 @@ To generate synthetic results on the uniform/Laplace distribution, run:
 
 If you wish to see PCA/NMF/WDL run on the uniform/Laplace distribution, comment out the code in helper.py() that prevents it from running those processes.
 
-
-
-
 # Replication of Salinas A results: 
 As an aside, some figures were modified for presentation after the fact, so the only difference between images in the paper and their corresponding image in that folder is a 
 title/axis. All Salinas A results involving WDL are stored in ```Salinas_A_experiments``` and all PCA/NMF results involving Salinas A are stored in ```PCA_NMF_comparisons```
@@ -62,16 +59,12 @@ This will create a unique directory for each parameter, and move them all into o
 The final matrix is titled ```NN_results.npy```
 
 
-# Random sampling results:
-1. We ran 10 random samples using control_loop_individual() in the main. Running
-python3 helper.py --n_atoms=32 --geom=0.001 --reg=0.1 is how we did so, we just 
-ran that 10 times. Then ran clustering_loop_adjusted() for results. These results
-are saved in clustering_acc.csv and painting_acc.csv
+# Random sampling results
+To test the robustness of our method, we ran 10 random samples across optimal parameters. The following method is slightly different from how we ran it, but the result is the same:
 
-Parameter invariant figures: 
-GT and training data images
+```python3 sample_robustness.py --n_atoms=32 --geom=0.001 --reg=0.1 --iter=10```
 
-The kmeans, old, utilities, and wdl folders are related to wdl. 
+
 
 
 If you have any questions about the code. email me, Scott Fullenbaum, at sfulle03@tufts.edu
