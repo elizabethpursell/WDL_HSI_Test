@@ -17,14 +17,14 @@ Recommend a Conda environment to maintain. Scripts to run experiments on Salinas
 
 The code was also run using ```Python 3.9.15```
 
-# Replication of paper images and results: 
+# Replication of sampling and synthetic results: 
 All figures are generated with code written in helper.py
 
 Common data and the indices of each point in training data are saved in files ```common_data.pt``` and ```common_index.pt``` respectively. 
 
 ## Random sample: 
 
-```python3 sampler.py --size=1002```
+Run ```python3 sampler.py --size=1002```
 
 You can tweak the size, but how the function is configured here requires it to be a multiple of 6 and small enough so we can take the same amount of points from each class. 
 It will create files called ```testing_data.pt``` and ```testing_index.pt```
@@ -39,15 +39,16 @@ To generate synthetic results on the uniform/Laplace distribution, run:
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=uniform```
 
-If you wish to see WDL run on the uniform/Laplace distribution, comment out the code in helper.py() that prevents it from running those processes.
+If you wish to see PCA/NMF/WDL run on the uniform/Laplace distribution, comment out the code in helper.py() that prevents it from running those processes.
 
-SalinasA WDL results, atoms, weights, clustering, spatial-NN and reconstructions are all stored in Salinas_A_experiments. 
 
-Some figures were modified for presentation after the fact, so the only difference 
-between images in the paper and their corresponding image in that folder is a 
-title/axis. The data is the same.  
 
-# To reproduce Salinas_A_experiments: 
+
+# Replication of Salinas A results: 
+As an aside, some figures were modified for presentation after the fact, so the only difference between images in the paper and their corresponding image in that folder is a 
+title/axis. All Salinas A results involving WDL are stored in ```Salinas_A_experiments``` and all PCA/NMF results involving Salinas A are stored in ```PCA_NMF_comparisons```
+
+To run this might require the most modification on the user end. 
 1. Again, all computations were run on the Tufts HPC cluster, so you will have
 to modify shell scripts.
 2. In the main of helper.py() call only control_loop()
