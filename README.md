@@ -53,9 +53,9 @@ If modified correctly, run the following commands:
 
 ```sh run_high_mu.sh``` and ```run_small_mu.sh```
 
-For context ```run_high_mu.sh``` handles experiments with geometric regularizer values greater than 1, and ```run_small_mu.sh``` handles experiments with geometric regularizer values <= 1. 
+For context ```run_high_mu.sh``` handles experiments with geometric regularizer values > 1, and ```run_small_mu.sh``` handles experiments with geometric regularizer values $\leq$ 1. 
 
-This will create a unique directory for each parameter, and move them all into one parent directory, 'parent'. In each folder, there should be a NN accuracy matrix saved as a .npy file. To combine these across all folders into a single matrix, run: 
+This will create a unique directory for each parameter, and move them all into one parent directory, 'parent'. In each folder, there should be an NN accuracy matrix saved as a .npy file. To combine these across all folders into a single matrix, run: 
 
 ``` python3 merge_results.py --root=parent ``` 
 
