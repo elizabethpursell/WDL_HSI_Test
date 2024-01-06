@@ -22,14 +22,16 @@ All figures are generated with code written in helper.py
 
 Common data and the indices of each point in training data are saved in files ```common_data.pt``` and ```common_index.pt``` respectively. 
 
-To generate an equivalent random sample, run:
+## Random sample: 
 
 ```python3 sampler.py --size=1002```
 
 You can tweak the size, but how the function is configured here requires it to be a multiple of 6 and small enough so we can take the same amount of points from each class. 
+It will create files called ```testing_data.pt``` and ```testing_index.pt```
 
+## Synthetic Results:
 
-To generate synthetic results on Gaussians, run:
+To generate the synthetic results with the two Gaussians run: 
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=gauss```
 
