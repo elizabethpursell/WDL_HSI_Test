@@ -14,9 +14,15 @@ on the Tufts HPC Cluster.
 
 # Replication of paper images and results: 
 All figures are generated with code written in helper.py
-Our common data set was generated with a run of the sample() function.  
-To run code in helper.py, from a command line interface cd into the Tests folder. 
-It will not work otherwise.
+
+Common data and the indices of each point in training data are saved in files ```common_data.pt``` and ```common_index.pt``` respectively. 
+
+To generate an equivalent random sample, run:
+
+```python3 sampler.py --size=1002```
+
+You can tweak the size, but how the function is configured here requires it to be a multiple of 6 and small enough so we can take the same amount of points from each class. 
+
 
 To generate synthetic results on Gaussians, run:
 
