@@ -18,7 +18,12 @@ Our common data set was generated with a run of the sample() function.
 To run code in helper.py, from a command line interface cd into the Tests folder. 
 It will not work otherwise.
 
-To generate synthetic results, call synthetic_experiments()
+To generate synthetic results on Gaussians, run:
+```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=gauss```
+
+To generate synthetic results on the Uniform/Laplace distribution, run:
+```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=uniform```
+
 The function will do PCA, NMF, linear mixture and WDL on the test atoms.
 To see results with uniform and laplace distribution, those test atoms are
 commented out, so uncomment them, change samp parameter to 21, and weights on line
