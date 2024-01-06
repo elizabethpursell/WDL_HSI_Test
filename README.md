@@ -15,6 +15,8 @@ Recommend a Conda environment to maintain. Scripts to run experiments on Salinas
 3. ```POT 0.8.2 ```
 4. ```scikit-learn 1.2.1```
 
+The code was also run using ```Python 3.9.15```
+
 # Replication of paper images and results: 
 All figures are generated with code written in helper.py
 
