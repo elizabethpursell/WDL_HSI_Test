@@ -22,17 +22,13 @@ To generate synthetic results on Gaussians, run:
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=gauss```
 
-To generate synthetic results on the Uniform/Laplace distribution, run:
+To generate synthetic results on the uniform/Laplace distribution, run:
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=uniform```
 
-The function will do PCA, NMF, linear mixture and WDL on the test atoms.
-To see results with uniform and laplace distribution, those test atoms are
-commented out, so uncomment them, change samp parameter to 21, and weights on line
-518 from 0.02 to 0.05. 
+If you wish to see WDL run on the uniform/Laplace distribution, comment out the code in helper.py() that prevents it from running those processes.
 
-SalinasA WDL results, atoms, weights, clustering, spatial-NN and reconstructions
-are all stored in Salinas_A_experiments. 
+SalinasA WDL results, atoms, weights, clustering, spatial-NN and reconstructions are all stored in Salinas_A_experiments. 
 
 Some figures were modified for presentation after the fact, so the only difference 
 between images in the paper and their corresponding image in that folder is a 
