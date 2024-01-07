@@ -1,6 +1,6 @@
 # WDL HSI
 
-All code specifically for the WDL algorithm and any code in the folders titled wdl, kmeans, old, and utilities are attributed to here: 
+All code specifically for the WDL algorithm and any code in the folders wdl, kmeans, old, and utilities are attributed here: 
 https://github.com/MarshMue/GeoWDL-TAG-ML-ICML-2023
 
 Information on the Salinas A sensor used for constructing the cost matrix is here:
@@ -35,26 +35,23 @@ To generate the synthetic results with the two Gaussians run:
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=gauss```
 
-To generate synthetic results on the uniform/Laplace distribution, run:
+To generate the synthetic results seen on the uniform/Laplace distribution, run:
 
 ```python3 synth_test.py --reg=0.001 --mu=0 --lm=1 --mode=uniform```
 
-If you wish to see PCA/NMF/WDL run on the uniform/Laplace distribution, comment out the code in helper.py() that prevents it from running those processes.
-
 # Replication of Salinas A results: 
-As an aside, some figures were modified for presentation after the fact, so the only difference between images in the paper and their corresponding image in that folder is a 
-title/axis. All Salinas A results involving WDL are stored in ```Salinas_A_experiments``` and all PCA/NMF results involving Salinas A are stored in ```PCA_NMF_comparisons```
+All Salinas A results involving WDL are stored in ```Salinas_A_experiments``` and all PCA/NMF results involving Salinas A are stored in ```PCA_NMF_comparisons```. Some figures were modified for presentation after the fact, so the only difference between images in the paper and their corresponding image in that folder is a title/axis. 
 
-To run the full set of Salinas A experiments requires user modification, and updating the script ```run.sh```. At a minimum, you'll need to replace anything that's been replaced by a *
-If modified correctly, run the following commands: 
+Running the full set of Salinas A experiments requires user modification, and updating the file ```run.sh```. At a minimum, you'll have to replace anything that is a *.
+If modified correctly, run the commands: 
 
 ```sh run_high_mu.sh``` and ```run_small_mu.sh```
 
-For context ```run_high_mu.sh``` handles experiments with geometric regularizer values > 1, and ```run_small_mu.sh``` handles experiments with geometric regularizer values $\leq$ 1. 
+```run_high_mu.sh``` handles experiments with geometric regularizer values > 1, and ```run_small_mu.sh``` handles experiments with geometric regularizer values $\leq$ 1. 
 
-This will create a unique directory for each parameter, and move them all into one parent directory, 'parent'. In each folder, there should be an NN accuracy matrix saved as a .npy file. To combine these across all folders into a single matrix, run: 
+This will create a unique directory for each parameter, and move them all into one parent directory, 'parent'. In each folder, there should be an NN accuracy matrix saved as a .npy file. To combine these into a single matrix, run: 
 
-``` python3 merge_results.py --root=parent ``` 
+``` python3 merge_results.py --root=parent ```  
 
 The final matrix is titled ```NN_results.npy```
 
@@ -63,8 +60,6 @@ The final matrix is titled ```NN_results.npy```
 To test the robustness of our method, we ran 10 random samples across optimal parameters. The following method is slightly different from how we ran it, but the result is the same:
 
 ```python3 sample_robustness.py --n_atoms=32 --geom=0.001 --reg=0.1 --iter=10```
-
-
 
 
 If you have any questions about the code. email me, Scott Fullenbaum, at sfulle03@tufts.edu
