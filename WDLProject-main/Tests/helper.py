@@ -316,7 +316,7 @@ def path_convert(path_temp):
 
 #For understanding, the run is clustering_loop(par_dir='/Salinas_A_experiments')
 def clustering_loop(core_dir='big_sample_k=', NN_mode='or', par_dir='', 
-                    savename='', train_mode='global', recon=False):
+                    savename='', train_mode='global', recon=False, savemode='HPC'):
     
     #Sets up the color map, remap gt labels for ease of use
     remap = {0: 0, 1: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6}
@@ -325,6 +325,7 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', par_dir='',
     new_cmap.colors[0] = (1, 1, 1, 1)
 
     test_neighbors = [20, 25, 30, 35, 40, 45, 50] #NN we use
+    
     params = np.zeros((len(test_neighbors)*1500, 5)) #Output matrix
     
     #Remaps the GT, and makes a mask for labeled points.
@@ -380,6 +381,7 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', par_dir='',
 
                     W = kneighbor_weights(weights, neighbors, constraint=NN_mode)
                     labels = spectral_cluster(W, 6)
+
                 except:
                     continue
                 label_set = sorted(list(set(labels)))
@@ -458,7 +460,10 @@ def clustering_loop(core_dir='big_sample_k=', NN_mode='or', par_dir='',
                 c += 1
     #Removes all rows that are all zeros, and then saves the matrix.
     params = params[~np.all(params == 0, axis=1)] 
-    np.save(os.getcwd() + par_dir + '/NN_results' + savename, params)
+    if savemode == 'HPC':
+        np.save(core_dir + '/NN_results_' + NN_mode, params)
+    else:
+        np.save(os.getcwd() + par_dir + '/NN_results' + savename, params)
 
 
 #Buckets: support, assuming its [0, buckets]
@@ -667,13 +672,11 @@ def control_loop():
     #In addition to doing WDL, this will also run the clustering loop on the results.
     for reg in regs: 
         name = 'big_fixed_sample_k=' + str(k) + '_mu=' + str(mu) + '_reg=' + str(reg)
-        name='testing'
         wdl_instance(k=k, train_size=1002, dir_name=name, reg=reg, mu=mu,
-                        max_iters=250, n_restarts=1, cost_power=1, 
+                        max_iters=400, n_restarts=2, cost_power=1, 
                         mode = 'train_classes', n_clusters=6, 
-                        label_hard=[1, 10, 11, 12, 13, 14], training_data='common_data.pt')
-        clustering_loop(core_dir=name, NN_mode='loose', train_mode='global')
-        clustering_loop(core_dir=name, NN_mode='tight', train_mode='global')
+                        label_hard=[1, 10, 11, 12, 13, 14], training_data='')
+        clustering_loop(core_dir=name, NN_mode='or', train_mode='local')
 
 #Spatial K-NN
 #Now this is near exclusively run inside clustering_loop() so some of these params
@@ -787,7 +790,8 @@ def gt_spatial_nn():
 
 #Paired down version of clustering_loop() to handle comparisons for random 
 #sample across data
-def clustering_loop_adj(core_dir='testing_k=32', NN_mode='or', par_dir='', train_mode='local'):
+def clustering_loop_adj(core_dir='testing_k=32', NN_mode='or', par_dir='', train_mode='local',
+                        atoms=32, reg=0.1, mu=0.001):
     
     #Sets up the color map, use remap to reassign labels as matplotlib coloring
     #can be a little weird at times. 
@@ -825,9 +829,9 @@ def clustering_loop_adj(core_dir='testing_k=32', NN_mode='or', par_dir='', train
             path_temp = str(path)
             #Essentially checks if valid directory and that it works
 
-            temp_k = 32
-            temp_mu = 0.001
-            temp_reg = 0.1
+            temp_k = atoms
+            temp_mu = mu
+            temp_reg = reg
             #If this is the right directory
             if core_dir in path_temp:
                 #We use a try/except as every once in a while, normalized SC can
