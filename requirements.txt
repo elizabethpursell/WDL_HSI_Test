@@ -1,0 +1,7 @@
+numpy
+torch
+seaborn
+POT
+tqdm
+cvxopt
+scikit-learn
