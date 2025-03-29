@@ -4,6 +4,8 @@ import ot
 import torch
 
 from ot.bregman import convolutional_barycenter2d_debiased, convolutional_barycenter2d
+from ot import  barycenter_unbalanced
+from ot.unbalanced import sinkhorn_unbalanced2, sinkhorn_stabilized_unbalanced
 from ot.lp import emd2
 
 
@@ -52,13 +54,16 @@ def OT(C: torch.Tensor,
             a = a.type(torch.float64)
             b = b.type(torch.float64)
             torch.divide(a, a.sum(dim=0), out=a)
-            torch.divide(b, b.sum(dim=0), out=b)
+            torch.divide(b, b.sum(dim=0), out=b) 
 
             # contiguous memory layout needed for emd2 lp solver
             return emd2(a.contiguous(), b.contiguous(), C)
 
         return lambda a, b: f(a, b, C)
-
+    #For use in unbalanced OT. Solves the analogous unbalanced problem to bregman stabilized as above and returns the loss
+    #reg_m is the marginal relaxation term usually tau
+    elif method == "bregman_stabilized_unbalanced":
+        return lambda a, b: sinkhorn_stabilized_unbalanced(a, b, C, reg = 5*reg, reg_m = 1)
     else:
         raise NotImplementedError(f"OT method {method} not implemented.")
 
@@ -168,7 +173,6 @@ def bregmanOT(a: torch.Tensor,
 
     :return: the entropic loss value of the OT problem
     """
-
     # rehshape a
     if len(a.shape) == 1:
         a = a.view(-1, 1)
@@ -178,6 +182,7 @@ def bregmanOT(a: torch.Tensor,
 
     n_a = a.shape[1]
     n_b = b.shape[1]
+
 
     if n_a > 1 and n_a != n_b:
         raise ValueError("If a has more than 1 distribution, then it must have an equal number of distributions as b.")
@@ -212,7 +217,6 @@ def bregmanOT(a: torch.Tensor,
     for i in range(maxiter):
         u = torch.div(a, torch.matmul(K, v))
         v = torch.div(b, torch.matmul(K.mT, u))
-
     # turn back on backprop for end computation
     torch.autograd.set_grad_enabled(True)
     if plan:
@@ -352,6 +356,18 @@ def barycenter(C: torch.Tensor,
         K = torch.exp(-C / reg).to(dev)
         OTfunc = lambda a, b: bregmanOT(a, b, K, reg, C=C, sharp=True, maxiter=maxsinkiter, dev=dev)
         return lambda D, w: sharpBarycenter(D, w, OTfunc, maxiter=maxiter, dev=dev)
+    
+    #Method added by me for, hopefully, doing UOT barycenters
+    elif method == "barycenter_unbalanced":
+        def UOTBary(D, w):
+            n_supp = D.shape[0]
+            n_barys = w.shape[1]
+            p = torch.zeros(n_supp, n_barys)
+            for i in range(n_barys):
+                #reg_m is the marginal relaxation term. Typically, this is give as tau
+                p[:, i] = barycenter_unbalanced(D, M = C, reg_m = .1, reg=reg, numItermax=maxiter, stopThr=0.0, weights = w[:,i])
+            return p
+        return lambda D, w: UOTBary(D,w)
     else:
         raise NotImplementedError(f"No barycenter method matches \"{method}\"")
 
@@ -410,7 +426,6 @@ def bregmanBary(D: torch.Tensor,
     :param maxiter: the maximum number of sinkhorn iterations to run
     :return: the (d x k) tensor of k barycenters
     """
-
     if len(weights.shape) == 1:
         weights = weights.view(-1, 1)
     n_barys = weights.shape[1]
@@ -426,7 +441,7 @@ def bregmanBary(D: torch.Tensor,
                       weights.mT.view(n_barys, n_hists, 1)).exp()
         # p = torch.matmul(phi.log(), weights).exp()
         b = torch.div(p, phi)
-
+    
     return p.view(n_barys, -1).mT
 
 

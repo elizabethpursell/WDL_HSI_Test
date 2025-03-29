@@ -61,7 +61,9 @@ class WDL():
             reg: float = 1.0,
             locality: bool = False,
             mu: float = 0.0,
-            max_iters: int = 1000,
+            #modification from original for runtime purposes
+            max_iters: int = 100,
+            #max_iters: int = 1000,
             jointOptimizer: type = torch.optim.SGD,
             jointOptimKWargs: {} = None,
             tol: float = 1e-6,
@@ -69,7 +71,9 @@ class WDL():
             verbose: bool = False,
             log: bool = False,
             log_iters: int = 100,
-            n_restarts=1,
+            #modification from original for run time purposes
+            n_restarts = 0, 
+            #n_restarts=1,
             height=None,
             width=None,
             batch_size: int = None,
@@ -164,6 +168,7 @@ class WDL():
         for restart in range(n_restarts):
 
             print(f"\n---Restart {restart}---")
+            print(init_method)
             if init_method == "rand":
                 # dictionary
                 self.D = dictClass(simplexSample(k=self.d, n_samples=self.n_atoms).to(self.dev))
@@ -268,9 +273,7 @@ class WDL():
                                    height=height, width=width, sharp=sharp, dev=self.dev)
 
                 # select barycenter method
-                self.barycenterSolver = barycenter(C=C, reg=reg, maxiter=max_sinkhorn_iters, method=bary_method,
-                                                   dev=self.dev,
-                                                   height=height, width=width)
+                self.barycenterSolver = barycenter(C=C, reg=reg, maxiter=max_sinkhorn_iters, method=bary_method, dev=self.dev, height=height, width=width)
 
                 # residual_error = math.inf
                 # TODO: allow exiting after some tolerance criteria is met
@@ -289,7 +292,7 @@ class WDL():
                     if not self.joint:
                         exitVal = False
                         for sub_iter in range(weight_iters):
-                            loss = self.computeLoss()
+                            loss = self.computeLoss(bary_method = bary_method)
                             total_loss += loss.detach()
                             if self.validateLoss(loss):
                                 # dummy variable to do the double break
@@ -308,11 +311,13 @@ class WDL():
 
                     # update dictionary or do joint optimization
                     for batch, batch_idxs in train_dl:
-                        loss = self.computeLoss(batch.mT, batch_idxs)
+                        loss = self.computeLoss(batch.mT, batch_idxs, bary_method = bary_method)
                         total_loss += loss.detach()
 
                         loss.backward()
+
                         self.updateVariables()
+
                     if self.validateLoss(total_loss, curr_iter):
                         break
 
@@ -349,7 +354,6 @@ class WDL():
         # return weights and logged info
         self.D = best_D
         weights = best_weights
-
         if log:
             return weights, log_dict
         else:
@@ -366,7 +370,7 @@ class WDL():
         else:
             self.D.update()
 
-    def computeLoss(self, batch: torch.Tensor, batch_idxs):
+    def computeLoss(self, batch: torch.Tensor, batch_idxs, bary_method = "bregman"):
         """
 
         :param batch: the indices to use for the batch
@@ -378,33 +382,40 @@ class WDL():
         # D = changeOfVariables(alpha)
         X = batch
         batch_size = batch.shape[1]
-
         # weights = getWeights(D)
 
         D = self.D.get()
         weights = self.weights.get()[:, batch_idxs]
 
         # compute barycenters
-
-        p = self.barycenterSolver(D, weights)
+        if bary_method == "bregman":
+            p = self.barycenterSolver(D, weights)
+        elif bary_method == "barycenter_unbalanced": 
+            p = self.barycenterSolver(D, weights)
         # compute loss
-        loss += self.OTsolver(X, p).sum()
+        if bary_method == "bregman":
+            loss += self.OTsolver(X, p).sum()
+        elif bary_method == "barycenter_unbalanced":
+            X_transposed = X.clone().detach().mT
+            p_transposed = p.clone().detach().mT
+            loss = 0
+            for i in range(0, len(X_transposed)):
+                plan = self.OTsolver(X_transposed[i], p_transposed[i])
+                plan_nonzero = plan + 1e-10
+                loss += torch.sum(plan_nonzero*torch.log(plan_nonzero))/100
         # Locality constraint
         if self.mu != 0.0:
             losses = torch.zeros(batch_size, D.shape[1], device=self.dev)
             for i in range(D.shape[1]):
                 intermediate_loss = 0.0
-
                 # compute weighted loss between data points and the atoms (locality constraint)
                 losses[:, i] = self.OTsolver(D[:, i], X)
 
             # add each data's loss to the overall loss
             loss += self.mu * torch.matmul(losses.view(batch_size, 1, D.shape[1]),
                                            weights.mT.view(batch_size, D.shape[1], 1)).sum()
-
         # normalize by num data points
         loss /= batch_size
-
         return loss
 
     def validateLoss(self, loss, curr_iter):
